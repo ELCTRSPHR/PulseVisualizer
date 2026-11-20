@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Pulse Visualizer/Pulse Visualizer.vcxproj" Id="aa6e73a2-586c-4aa7-8991-4263cae12cfd" />
+</Solution>

@@ -1,0 +1,4 @@
+// Application icon (shown in File Explorer, taskbar, Alt+Tab).
+#include <windows.h>
+#define IDI_APPICON 101
+IDI_APPICON ICON "pulse.ico"

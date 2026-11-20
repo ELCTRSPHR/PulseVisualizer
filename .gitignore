@@ -1,0 +1,16 @@
+# Build output
+x64/
+Debug/
+Release/
+*.pdb
+*.obj
+*.ilk
+*.exe
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Settings + encrypted Spotify token (never commit)
+rgbpulse.ini
