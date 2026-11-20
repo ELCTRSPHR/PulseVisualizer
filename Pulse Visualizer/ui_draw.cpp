@@ -54,20 +54,17 @@ void Renderer::drawUI(double now) {
     float tAge = (float)(now - gToastT);
     float ta = std::min(clampv(1.f - (tAge - 1.8f) / 0.6f, 0.f, 1.f), smooth01(tAge / 0.18f));   // quick fade in, gentle fade out
     if (ta > 0.f && !gToastText.empty()) {
-        // a small, quiet pill near the top: accent dot + one line of text, sized to the text
+        // a small, quiet pill near the top: one line of text, sized to the text
         float txtW = 0.f;
         {
             ComPtr<IDWriteTextLayout> tl;
             if (SUCCEEDED(dw->CreateTextLayout(gToastText.c_str(), (UINT32)gToastText.size(), fL.Get(), 4000.f, 100.f, &tl)) && tl) { DWRITE_TEXT_METRICS tm = {}; tl->GetMetrics(&tm); txtW = tm.widthIncludingTrailingWhitespace; }
         }
-        const float th = 30 * ui, padL = 30 * ui, padR = 16 * ui;
-        float tw = std::min((float)W - 40 * ui, txtW + padL + padR), x = (W - tw) * 0.5f, y = 18 * ui + (1.f - ta) * -8 * ui;
+        const float th = 30 * ui, pad = 18 * ui;
+        float tw = std::min((float)W - 40 * ui, txtW + 2 * pad), x = (W - tw) * 0.5f, y = 18 * ui + (1.f - ta) * -8 * ui;
         ctx->PushLayer(D2D1::LayerParameters1(D2D1::InfiniteRect(), nullptr, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1::IdentityMatrix(), ta), nullptr);
         drawPane(x, y, tw, th, th * 0.5f, accent, 1.0f);
-        D2D1_COLOR_F dc = whiten(accent, 0.3f);
-        br->SetColor(D2D1::ColorF(dc.r, dc.g, dc.b, 0.25f)); rt->FillEllipse(D2D1::Ellipse(D2D1::Point2F(x + 16 * ui, y + th * 0.5f), 6 * ui, 6 * ui), br.Get());
-        br->SetColor(D2D1::ColorF(dc.r, dc.g, dc.b, 1.f));    rt->FillEllipse(D2D1::Ellipse(D2D1::Point2F(x + 16 * ui, y + th * 0.5f), 3 * ui, 3 * ui), br.Get());
-        text(gToastText, x + padL, y, tw - padL - padR + 2 * ui, th, fL.Get(), D2D1::ColorF(1, 1, 1, 0.92f));
+        text(gToastText, x + pad, y, tw - 2 * pad + 2 * ui, th, fL.Get(), D2D1::ColorF(1, 1, 1, 0.92f));
         ctx->PopLayer();
     }
 }
