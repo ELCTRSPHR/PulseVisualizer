@@ -11,22 +11,17 @@ It listens to whatever your PC is playing (WASAPI loopback), so it works with an
 - **Colors:** themes, or colors pulled from the current album art
 - **Looks:** save up to 4 looks, or share one as a short `PV1-...` code
 
-Plain C++17 on Win32, Direct2D, Direct3D 11 (HLSL), DirectWrite, WIC and WinHTTP.
-No third-party libraries; it builds to a single exe.
+## Download
 
-## Requirements
+Download `PulseVisualizer.exe` from the [latest release](https://github.com/ELCTRSPHR/PulseVisualizer/releases/latest)
+and run it. It's a single standalone exe: no installer and nothing else to install.
+Put it in its own folder, because it saves its settings file next to itself.
 
-- Windows 10 or 11, x64, with a Direct3D 11 capable GPU
-- Visual Studio 2026 with the **Desktop development with C++** workload
-  (Visual Studio 2022 17.13+ also works: when it asks, retarget the project to its v143 toolset)
+**Requirements:** Windows 10 or 11 (64-bit) and a graphics card with Direct3D 11 support (practically any
+PC from the last ten years).
 
-## Building
-
-1. Open `Pulse Visualizer.slnx`.
-2. Select **Release | x64** and build.
-3. The exe is written to `x64\Release\`.
-
-Close the app before rebuilding, or the linker can't overwrite the exe.
+Built in plain C++ on Win32, Direct2D, Direct3D 11 (HLSL), DirectWrite, WIC and WinHTTP, with no
+third-party libraries.
 
 ## Spotify setup (one time)
 
