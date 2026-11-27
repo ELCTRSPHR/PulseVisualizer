@@ -7,7 +7,8 @@ It listens to whatever your PC is playing (WASAPI loopback), so it works with an
 - **GPU effects:** HDR bloom with light streaks, chromatic aberration on kicks, tone mapping,
   color grading, film grain, and optional music-reactive backgrounds (Flow, Nebula, Aurora)
 - **Spotify:** now-playing card with play/pause, skip, seek, volume and an up-next queue
-- **Lyrics:** time-synced lyrics from [LRCLIB](https://lrclib.net) with a glowing current line
+- **Lyrics:** time-synced lyrics from [LRCLIB](https://lrclib.net) with a glowing current line,
+  and optional translation of songs in other languages (DeepL)
 - **Colors:** themes, or colors pulled from the current album art
 - **Looks:** save up to 4 looks, or share one as a short `PV1-...` code
 
@@ -35,6 +36,18 @@ Spotify playback control needs a free developer app and a Premium account.
 Sign-in uses OAuth PKCE, so no client secret is needed. The refresh token is stored encrypted for
 your Windows user (DPAPI) in `rgbpulse.ini` next to the exe, together with your settings.
 
+## Lyrics translation (optional)
+
+Songs in another language can show a translated line under each lyric. This uses DeepL with your own
+free key (500,000 characters a month, roughly a few hundred songs).
+
+1. Sign up for the free [DeepL API plan](https://www.deepl.com/pro-api) and copy your key from **API Keys**.
+2. In Pulse Visualizer press **T**, paste the key (Ctrl+V) and press Enter.
+3. Pick your language under **Settings > Spotify > Translate to**.
+
+Only songs that aren't already in your language are translated, each song once per session, and lines
+already in your language are left alone. The key is stored encrypted next to your settings.
+
 ## Controls
 
 | Key | Action |
@@ -52,6 +65,7 @@ your Windows user (DPAPI) in `rgbpulse.ini` next to the exe, together with your 
 | G | Shader effects on / off |
 | B, P, M | Bloom, particles, mirror |
 | L, [ and ] | Lyrics on / off, nudge lyric timing |
+| T | DeepL key for lyric translation |
 | H | Hide / show the interface |
 | F, F11, double-click | Fullscreen |
 | Space | Play / pause |
@@ -70,7 +84,7 @@ your Windows user (DPAPI) in `rgbpulse.ini` next to the exe, together with your 
 | `ui_draw.cpp`, `ui_state.cpp` | Now-playing card, settings panel, UI state |
 | `splash.cpp` | Logo and splash screen |
 | `audio.cpp`, `analyzer.cpp` | Loopback capture, FFT, bands and beat detection |
-| `spotify.cpp` | Spotify Web API, album art, lyrics lookup |
+| `spotify.cpp` | Spotify Web API, album art, lyrics lookup and translation |
 | `settings.cpp` | Settings table, presets, ini file, look codes |
 | `color.cpp` | Color themes and album-art palette |
 | `http.cpp`, `json.cpp`, `util.cpp` | WinHTTP wrapper, small JSON parser, helpers |
@@ -79,4 +93,4 @@ your Windows user (DPAPI) in `rgbpulse.ini` next to the exe, together with your 
 ## Notes
 
 The NCS mode is a tribute to the NoCopyrightSounds visualizer style. This project is not affiliated
-with NoCopyrightSounds or Spotify.
+with NoCopyrightSounds, Spotify or DeepL.

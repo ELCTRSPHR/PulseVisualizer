@@ -50,6 +50,7 @@ void Renderer::drawUI(double now) {
         drawNowPlaying(now, accent);
     }
     if (gOverlay == OV_SETUP) drawSetup(now, accent);
+    else if (gOverlay == OV_DEEPL) drawDeepL(now, accent);
 
     float tAge = (float)(now - gToastT);
     float ta = std::min(clampv(1.f - (tAge - 1.8f) / 0.6f, 0.f, 1.f), smooth01(tAge / 0.18f));   // quick fade in, gentle fade out
@@ -558,4 +559,25 @@ void Renderer::drawSetup(double now, D2D1_COLOR_F ac) {
     text(shown, lx + 14 * ui, fy, lw - 28 * ui, 44 * ui, fMed.Get(), D2D1::ColorF(1, 1, 1, gInput.empty() ? 0.35f : 1.f));
     text(L"A browser tab opens so you can approve access. Your login never touches this app.", lx, fy + 54 * ui, lw, 22 * ui, fSmall.Get(), D2D1::ColorF(1, 1, 1, 0.5f));
     text(L"Enter  connect        Esc  cancel", lx, fy + 80 * ui, lw, 22 * ui, fSmall.Get(), D2D1::ColorF(1, 1, 1, 0.45f));
+}
+void Renderer::drawDeepL(double now, D2D1_COLOR_F ac) {                    // DeepL key screen (T): same layout as the Spotify setup
+    br->SetColor(D2D1::ColorF(0, 0, 0, 0.55f)); rt->FillRectangle(D2D1::RectF(0, 0, (float)W, (float)H), br.Get());
+    float pw = std::min(720.f * ui, (float)W - 40 * ui), ph = 340 * ui, x = (W - pw) * 0.5f, y = std::max(24.f * ui, (H - ph) * 0.4f);
+    drawPane(x, y, pw, ph, 16 * ui, ac, 1.1f); addHit(H_PANEL, x, y, x + pw, y + ph);
+    float lx = x + 26 * ui, lw = pw - 52 * ui, ly = y + 12 * ui; D2D1_COLOR_F wh = D2D1::ColorF(1, 1, 1, 0.85f);
+    text(L"Translate lyrics", lx, ly, lw, 40 * ui, fTitle.Get(), D2D1::ColorF(1, 1, 1, 1));
+    text(gSp.haveDeepL ? L"A DeepL key is saved. Paste a new one to replace it." : L"Uses DeepL with your own free key (500,000 characters a month).",
+        lx, ly + 40 * ui, lw, 24 * ui, fL.Get(), D2D1::ColorF(1, 1, 1, 0.6f));
+    text(L"1.  Sign up for the free DeepL API plan at deepl.com/pro-api.", lx, ly + 76 * ui, lw, 24 * ui, fL.Get(), wh);
+    text(L"2.  In your DeepL account, open API Keys and copy your key.", lx, ly + 102 * ui, lw, 24 * ui, fL.Get(), wh);
+    text(L"3.  Paste it below (Ctrl+V) and press Enter.", lx, ly + 128 * ui, lw, 24 * ui, fL.Get(), wh);
+    float fy = ly + 168 * ui;
+    fieldInset(lx, fy, lw, 44 * ui, 12 * ui, ac, 1.f);
+    bool caret = fmod(now, 1.0) < 0.6;
+    std::wstring masked = gInput.size() <= 4 ? gInput : gInput.substr(0, 4) + std::wstring(std::min<size_t>(gInput.size() - 4, 32), (wchar_t)0x2022);   // keys are secrets: don't show them on screen
+    std::wstring shown = gInput.empty() ? std::wstring(L"DeepL API key") : masked + (caret ? L"|" : L" ");
+    text(shown, lx + 14 * ui, fy, lw - 28 * ui, 44 * ui, fMed.Get(), D2D1::ColorF(1, 1, 1, gInput.empty() ? 0.35f : 1.f));
+    text(L"Only songs that aren't in your language are sent to DeepL. Pick the language in Settings > Spotify.", lx, fy + 54 * ui, lw, 22 * ui, fSmall.Get(), D2D1::ColorF(1, 1, 1, 0.5f));
+    text(gSp.haveDeepL ? L"Enter  save        Enter on an empty field  remove key        Esc  cancel" : L"Enter  save        Esc  cancel",
+        lx, fy + 80 * ui, lw, 22 * ui, fSmall.Get(), D2D1::ColorF(1, 1, 1, 0.45f));
 }

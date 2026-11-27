@@ -38,8 +38,16 @@ void Renderer::buildLyricRows() {                                  // collapse r
 }
 
 void Renderer::prepareLyrics(float dt, double now) {
-    for (int i = 0; i < 10; i++) lyItems[i].lay.Reset();
+    for (int i = 0; i < 10; i++) { lyItems[i].lay.Reset(); lyItems[i].trLay.Reset(); }
     lyN = 0; lyMsg.clear();
+    const char* trTarget = translateTarget();
+    gSp.setTranslation(trTarget);                                          // the lyric thread translates new songs when this is set
+    {   // turning translation on without a key: point to the key screen once
+        static bool wasOn = S.translate > 0.5f;
+        bool on = S.translate > 0.5f;
+        if (on && !wasOn && !gSp.haveDeepL) toast(L"Press T to add your free DeepL key");
+        wasOn = on;
+    }
     if (S.lyrics < 0.5f) return;
     if (!fLy || lyFontSel != clampv((int)(S.lyricFont + 0.5f), 0, 3)) makeLyricFont();
     if (!fLy) return;
@@ -101,16 +109,19 @@ void Renderer::prepareLyrics(float dt, double now) {
     lyMaxW = side ? (float)W * 0.31f : std::min((float)W * 0.84f, 1200.f * std::max(1.f, sc));
     float restX0 = (W - lyMaxW) * 0.5f, sideX0 = (float)W * 0.645f;
     lyX0 = side ? restX0 + (sideX0 - restX0) * sideT : restX0;
-    auto mk = [&](const std::string& u8, float size) -> ComPtr<IDWriteTextLayout> {
+    auto mk = [&](const std::string& u8, float size, bool light) -> ComPtr<IDWriteTextLayout> {
         std::wstring w = u8.empty() ? std::wstring(L"\u266A") : toW(u8);
         ComPtr<IDWriteTextLayout> l;
         dw->CreateTextLayout(w.c_str(), (UINT32)w.size(), fLy.Get(), lyMaxW, 10000.f, &l);
         if (l) {
             DWRITE_TEXT_RANGE r = { 0, (UINT32)w.size() }; l->SetFontSize(size, r);
+            if (light) l->SetFontWeight(DWRITE_FONT_WEIGHT_MEDIUM, r);
             l->SetTextAlignment(side ? DWRITE_TEXT_ALIGNMENT_LEADING : DWRITE_TEXT_ALIGNMENT_CENTER);
         }
         return l;
         };
+    const bool showTr = trTarget[0] != 0 && lyr.trLang == trTarget;       // translations are ready for the wanted language
+    const float trFs = fs * 0.52f, trGap = fs * 0.14f;
     int prevN = side ? 2 : 1, nextN = side ? 4 : 2;
     int fl = (int)floorf(lyPos); float frac = lyPos - (float)fl;
     int jlo = std::max(-1, fl - prevN), jhi = std::min(total - 1, fl + 1 + nextN);
@@ -123,9 +134,13 @@ void Renderer::prepareLyrics(float dt, double now) {
         else { it.s = interp(sN, 4, ad); it.alpha = interp(aN, 4, ad) * clampv((float)(prevN + 1) - ad, 0.f, 1.f); }
         if (j < 0) it.alpha *= 0.4f;                                    // the music note shown before the first line
         if (it.alpha < 0.01f) continue;
-        it.lay = mk(j < 0 ? std::string() : lyD[j].text, fs); if (!it.lay) continue;
+        it.lay = mk(j < 0 ? std::string() : lyD[j].text, fs, false); if (!it.lay) continue;
         DWRITE_TEXT_METRICS tm = {}; it.lay->GetMetrics(&tm);
-        it.w = tm.width; it.h = tm.height; it.left = tm.left; it.j = j;
+        it.w = tm.width; it.h = it.hm = tm.height; it.left = tm.left; it.j = j;
+        if (showTr && j >= 0 && !lyD[j].tr.empty()) {                     // translated line sits just under the lyric
+            it.trLay = mk(lyD[j].tr, trFs, true);
+            if (it.trLay) { DWRITE_TEXT_METRICS t2 = {}; it.trLay->GetMetrics(&t2); it.h += trGap + t2.height; }
+        }
         float w0 = clampv(1.f - ad, 0.f, 1.f); it.w0 = w0 * w0 * (3.f - 2.f * w0);
         lyN++;
     }
@@ -214,6 +229,12 @@ void Renderer::drawLyrics() {
                     rt->SetTransform(xf);
                 }
             }
+        }
+        if (it.trLay) {                                                                          // translation: smaller and softer, brightens with the sung line
+            DWRITE_TEXT_METRICS t2 = {}; it.trLay->GetMetrics(&t2);
+            D2D1_COLOR_F tc = whiten(cA, 0.55f);
+            br->SetColor(D2D1::ColorF(tc.r, tc.g, tc.b, it.alpha * (0.42f + 0.40f * it.w0)));
+            rt->DrawTextLayout(D2D1::Point2F(x0, o.y + it.h - t2.height), it.trLay.Get(), br.Get());
         }
     }
     rt->SetTransform(D2D1::Matrix3x2F::Identity());

@@ -4,6 +4,7 @@
 
 void closeOverlay();
 void connectSpotify();              // S key / "Connect Spotify" button
+void openDeepL();                   // T key: DeepL key screen for lyric translation
 void overlayEnter();
 int hitTest(float x, float y);
 void dragUpdate(float x);

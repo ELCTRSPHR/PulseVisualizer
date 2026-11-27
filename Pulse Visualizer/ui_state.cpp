@@ -44,7 +44,7 @@ const wchar_t* const kPTabItems[5][20] = {
     { L"Color theme", L"Color by", L"Color speed", L"Hue offset", L"Brightness", L"Center album art", L"Album art backdrop", L"Backdrop motion", L"Shader background", L"Background strength", L"Panel opacity", nullptr },
     { L"Shader effects", L"Bloom", L"Bloom size", L"Bloom streaks", L"Color grade", L"Film grain", L"Trails", L"RGB split", L"Camera shake", L"Beat flash", L"Vignette", L"Background pulse", L"Particles", L"Particle amount", L"Particle size", nullptr },
     { L"Sensitivity", L"Treble boost", L"Dynamic range (dB)", L"Min frequency (Hz)", L"Max frequency (Hz)", L"Smoothing", L"Beat punch", L"Beat sensitivity", L"Idle demo", nullptr },
-    { L"Now playing card", L"Now playing size", L"Song intro", L"Lyrics", L"Lyrics layout", L"Lyrics position", L"Lyrics size", L"Lyrics font", L"Lyrics colors", L"Lyrics glow", L"Lyrics offset (ms)", nullptr },
+    { L"Now playing card", L"Now playing size", L"Song intro", L"Lyrics", L"Lyrics layout", L"Lyrics position", L"Lyrics size", L"Lyrics font", L"Lyrics colors", L"Lyrics glow", L"Lyrics offset (ms)", L"Lyrics translation", L"Translate to", nullptr },
 };
 const Shortcut kShortcuts[] = {
     { L"Tab   Esc",              L"Open / close settings" },
@@ -70,6 +70,7 @@ const Shortcut kShortcuts[] = {
     { L"Shift + S",              L"Disconnect Spotify" },
     { L"Space",                  L"Play / pause" },
     { L"L",                      L"Lyrics on / off" },
+    { L"T",                      L"DeepL key for lyric translation" },
     { L"[   ]",                  L"Lyrics later / earlier" },
     { L"Mouse wheel",            L"Change setting / volume / tab" },
 };

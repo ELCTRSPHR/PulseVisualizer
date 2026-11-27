@@ -391,10 +391,20 @@ LyricsData Spotify::lookupLyrics(const TrackInfo& t, bool& netFail) {      // LR
     return out;
 }
 void Spotify::lyricWorker() {                                    // own thread: slow lookups never stall playback polling or button presses
+    {   // saved DeepL key (encrypted for this Windows user, like the Spotify token)
+        wchar_t b[2048] = {}; GetPrivateProfileStringW(L"deepl", L"key", L"", b, 2048, iniPath().c_str());
+        std::string k = dpapiUnprotect(toU8(b));
+        { std::lock_guard<std::mutex> l(mx); deeplKey = k; }
+        haveDeepL = !k.empty();
+    }
     while (running) {
-        TrackInfo t;
-        { std::unique_lock<std::mutex> l(lmx); lcv.wait(l, [&] { return lhas || !running; }); if (!running) break; t = lpend; lhas = false; }
-        for (int attempt = 0; attempt < 4 && running; attempt++) {
+        TrackInfo t; bool newTrack = false;
+        {
+            std::unique_lock<std::mutex> l(lmx); lcv.wait(l, [&] { return lhas || trKick || !running; }); if (!running) break;
+            if (lhas) { t = lpend; lhas = false; newTrack = true; }
+            trKick = false;
+        }
+        if (newTrack) for (int attempt = 0; attempt < 4 && running; attempt++) {
             bool netFail = false;
             LyricsData out = lookupLyrics(t, netFail);
             {
@@ -405,7 +415,118 @@ void Spotify::lyricWorker() {                                    // own thread: 
             for (int i = 0; i < (attempt == 0 ? 20 : 50) && running; i++) { Sleep(100); std::lock_guard<std::mutex> l(lmx); if (lhas) break; }
             { std::lock_guard<std::mutex> l(lmx); if (lhas) break; }
         }
+        if (running) translateCurrent();
     }
+}
+
+// ---- lyric translation (DeepL) ----
+static std::string jsonStr(const std::string& s) {
+    std::string o = "\"";
+    for (unsigned char c : s) {
+        if (c == '"' || c == '\\') { o += '\\'; o += (char)c; }
+        else if (c < 0x20) { char b[8]; sprintf_s(b, "\\u%04x", c); o += b; }
+        else o += (char)c;
+    }
+    return o + "\"";
+}
+static std::string trimWs(const std::string& s) {
+    size_t a = s.find_first_not_of(" \t\r\n"), b = s.find_last_not_of(" \t\r\n");
+    return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+}
+static std::string lowerAscii(std::string s) { for (char& c : s) if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a'); return s; }
+static std::string deeplBase(const std::string& key) {      // free-plan keys end in ":fx" and use their own host
+    return key.size() > 3 && key.compare(key.size() - 3, 3, ":fx") == 0 ? "https://api-free.deepl.com" : "https://api.deepl.com";
+}
+static std::string deeplAuth(const std::string& key) { return "Authorization: DeepL-Auth-Key " + key + "\r\n"; }
+
+void Spotify::setTranslation(const std::string& lang) {
+    { std::lock_guard<std::mutex> l(lmx); if (lang == trWant) return; trWant = lang; trKick = true; }
+    lcv.notify_one();
+}
+void Spotify::setDeepLKey(std::string key) {
+    key.erase(std::remove_if(key.begin(), key.end(), [](unsigned char c) { return isspace(c) != 0; }), key.end());
+    { std::lock_guard<std::mutex> l(mx); deeplKey = key; }
+    WritePrivateProfileStringW(L"deepl", L"key", key.empty() ? L"" : toW(dpapiProtect(key)).c_str(), iniPath().c_str());
+    haveDeepL = !key.empty();
+    trResetFails = true;
+    { std::lock_guard<std::mutex> l(lmx); trKick = true; }
+    lcv.notify_one();
+    if (!key.empty()) post([this, key] { checkDeepLKey(key); });
+}
+void Spotify::checkDeepLKey(const std::string& key) {        // runs on the Spotify thread right after the key is saved
+    HttpResp r = http("GET", deeplBase(key) + "/v2/usage", "", deeplAuth(key));
+    if (r.status == 200) {
+        JV j = parseJson(r.body); double used = j["character_count"].num(0), lim = j["character_limit"].num(0);
+        if (lim > 0) setNotice("DeepL connected - " + std::to_string((int)(used * 100.0 / lim + 0.5)) + "% of this month's characters used");
+        else setNotice("DeepL connected");
+    }
+    else if (r.status == 403) setNotice("DeepL didn't accept that key - press T to check it");
+    else if (r.status == 0) setNotice("Couldn't reach DeepL - check your internet connection");
+    else setNotice("DeepL answered with error " + std::to_string(r.status));
+}
+// Translates one song. Saves quota: lines are de-duplicated (choruses repeat), and a short sample goes first so a song
+// that is already in the target language costs only a few lines. Returns 0, or the HTTP status of the failure (-1: no connection).
+int Spotify::deeplTranslate(const std::string& key, const std::string& lang, const std::vector<LyricLine>& lines, std::vector<std::string>& out) {
+    out.assign(lines.size(), std::string());
+    std::vector<std::string> uniq; std::map<std::string, size_t> idx;
+    for (const LyricLine& ln : lines) { std::string t = trimWs(ln.text); if (!t.empty() && !idx.count(t)) { idx[t] = uniq.size(); uniq.push_back(t); } }
+    if (uniq.empty()) return 0;
+    const std::string base = lang.substr(0, 2), url = deeplBase(key) + "/v2/translate";
+    std::vector<std::string> res(uniq.size()), det(uniq.size());
+    auto call = [&](size_t from, size_t to) -> int {
+        std::string body = "{\"text\":[";
+        for (size_t i = from; i < to; i++) { if (i > from) body += ","; body += jsonStr(uniq[i]); }
+        body += "],\"target_lang\":" + jsonStr(lang) + "}";
+        HttpResp r = http("POST", url, body, deeplAuth(key) + "Content-Type: application/json\r\n");
+        if (r.status != 200) return r.status == 0 ? -1 : r.status;
+        JV j = parseJson(r.body); const JV& arr = j["translations"];
+        for (size_t i = from; i < to; i++) { const JV& e = arr.at(i - from); res[i] = e["text"].str(); det[i] = e["detected_source_language"].str(); }
+        return 0;
+    };
+    size_t ns = std::min<size_t>(4, uniq.size());
+    if (int rc = call(0, ns)) return rc;
+    bool allSame = true; for (size_t i = 0; i < ns; i++) if (det[i].compare(0, 2, base) != 0) allSame = false;
+    if (allSame) return 0;                                     // already in the target language: nothing to show
+    for (size_t b = ns; b < uniq.size(); b += 50) if (int rc = call(b, std::min(uniq.size(), b + 50))) return rc;
+    for (size_t i = 0; i < lines.size(); i++) {
+        std::string t = trimWs(lines[i].text); if (t.empty()) continue;
+        size_t k = idx[t];
+        if (det[k].compare(0, 2, base) == 0 || lowerAscii(trimWs(res[k])) == lowerAscii(t)) continue;   // that line is already in the target language
+        out[i] = trimWs(res[k]);
+    }
+    return 0;
+}
+void Spotify::translateCurrent() {                            // lyric thread: translate the current song if wanted and not done yet
+    if (trResetFails.exchange(false)) trFailed.clear();
+    std::string lang; { std::lock_guard<std::mutex> l(lmx); lang = trWant; }
+    std::string key, id; std::vector<LyricLine> lines;
+    {
+        std::lock_guard<std::mutex> l(mx);
+        if (lang.empty() || deeplKey.empty() || lyr.state != 1 || lyr.trLang == lang) return;
+        key = deeplKey; id = lyr.id; lines = lyr.lines;
+    }
+    const std::string ck = id + "|" + lang;
+    if (trFailed.count(ck)) return;
+    std::vector<std::string> tr;
+    auto hit = trCache.find(ck);
+    if (hit != trCache.end()) tr = hit->second;
+    else {
+        int rc = deeplTranslate(key, lang, lines, tr);
+        if (rc != 0) {
+            trFailed.insert(ck);
+            if (rc == 403) setNotice("DeepL didn't accept your key - press T to check it");
+            else if (rc == 456) setNotice("DeepL's monthly translation limit is used up");
+            else if (rc == 429) setNotice("DeepL is busy - this song wasn't translated");
+            else if (rc == -1) setNotice("Couldn't reach DeepL - this song wasn't translated");
+            else setNotice("DeepL error " + std::to_string(rc) + " - this song wasn't translated");
+            return;
+        }
+        trCache[ck] = tr;
+    }
+    std::lock_guard<std::mutex> l(mx);
+    if (lyr.id != id || lyr.lines.size() != tr.size()) return;    // the song changed meanwhile
+    for (size_t i = 0; i < tr.size(); i++) lyr.lines[i].tr = tr[i];
+    lyr.trLang = lang; lyr.gen++;
 }
 void Spotify::doAuth() {
     std::string cid; { std::lock_guard<std::mutex> l(mx); cid = clientId; }

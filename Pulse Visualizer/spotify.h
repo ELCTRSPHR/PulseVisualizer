@@ -13,8 +13,8 @@ struct PlayerState {
 };
 struct ArtData { std::vector<uint8_t> px; int w = 0, h = 0; float col[3][3] = {}; unsigned gen = 0; };
 void decodeArt(const std::string& data, ArtData& out);
-struct LyricLine { int ms = 0; std::string text; };
-struct LyricsData { std::string id; int state = 0; std::vector<LyricLine> lines; unsigned gen = 0; };
+struct LyricLine { int ms = 0; std::string text, tr; };          // tr: translation (empty = none / already in the target language)
+struct LyricsData { std::string id; int state = 0; std::vector<LyricLine> lines; unsigned gen = 0; std::string trLang; };   // trLang: language the tr fields are in
 void parseLrc(const std::string& lrc, std::vector<LyricLine>& out);
 void spreadPlain(const std::string& plain, int durMs, std::vector<LyricLine>& out);
 std::string cleanTitle(std::string s);
@@ -43,7 +43,19 @@ public:
     void wantQueue();                                   // fetch "up next" (rate-limited; call freely while the card is open)
     bool getQueue(std::vector<TrackInfo>& out, std::string& forTrack);
     void skipTo(int k);                                 // jump to the k-th upcoming track (0 = next)
+    // lyric translation (DeepL API, the user's own free key)
+    std::atomic<bool> haveDeepL{ false };
+    void setDeepLKey(std::string key);                  // saves (encrypted) and checks the key; empty removes it
+    void setTranslation(const std::string& lang);       // wanted DeepL target language ("" = off); cheap, call every frame
 private:
+    std::string deeplKey, trWant;                       // deeplKey guarded by mx, trWant by lmx
+    bool trKick = false;                                // (lmx) translation settings changed: re-check the current song
+    std::atomic<bool> trResetFails{ false };
+    std::map<std::string, std::vector<std::string>> trCache;   // "trackId|lang" -> per-line translations (lyric thread only)
+    std::set<std::string> trFailed;                     // "trackId|lang" that failed: don't retry until the key changes
+    void translateCurrent();
+    int deeplTranslate(const std::string& key, const std::string& lang, const std::vector<LyricLine>& lines, std::vector<std::string>& out);
+    void checkDeepLKey(const std::string& key);
     std::vector<TrackInfo> upNext; std::string upNextFor; double queueAt = -100.0; bool queueBusy = false;
     std::thread th;
     std::mutex mx;

@@ -16,11 +16,16 @@ struct Settings {
     float panelAlpha = 0.35f;                                                       // see-through UI panels (0 = fully clear)
     float fx = 1, grain = 0.15f, streaks = 0.2f, grade = 0.5f;                      // GPU shader post-processing
     float bgStyle = 0, bgStrength = 0.5f;                                           // shader background (0 off, 1 Flow, 2 Nebula, 3 Aurora)
+    float translate = 0, trLang = 0;                                                // lyric translation (DeepL) + target language index
 };
 extern Settings S;
 struct Param { const wchar_t* name; float* v; float mn, mx, st; const wchar_t* const* labels; float def; };
 extern const wchar_t* const kMode[];
 extern const wchar_t* const kBgStyle[];
+constexpr int NTRLANG = 17;
+extern const wchar_t* const kTrLang[NTRLANG];   // "Translate to" names
+extern const char* const kTrCode[NTRLANG];      // matching DeepL target_lang codes
+const char* translateTarget();                  // DeepL code for the current setting, or "" when translation is off
 extern const wchar_t* const kTheme[];
 extern const wchar_t* const kColorBy[];
 extern const wchar_t* const kBarStyle[];

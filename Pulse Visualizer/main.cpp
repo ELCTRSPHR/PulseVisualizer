@@ -140,6 +140,7 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM wp, LPARAM lp) {
         case VK_ESCAPE: if (gPanel) gPanel = false; else if (gFullscreen) toggleFullscreen(); break;
         case 'H': gShowUI = !gShowUI; break;
         case 'L': S.lyrics = S.lyrics > 0.5f ? 0.f : 1.f; toast(S.lyrics > 0.5f ? L"Lyrics on" : L"Lyrics off"); break;
+        case 'T': openDeepL(); break;
         case VK_OEM_4: S.lyricOffset = clampv(S.lyricOffset - 100.f, -3000.f, 3000.f); toast(L"Lyrics later: offset " + std::to_wstring((int)S.lyricOffset) + L" ms"); break;
         case VK_OEM_6: S.lyricOffset = clampv(S.lyricOffset + 100.f, -3000.f, 3000.f); toast(L"Lyrics earlier: offset " + std::to_wstring((int)S.lyricOffset) + L" ms"); break;
         case 'R': au.restart(); toast(L"Restarting audio capture"); break;

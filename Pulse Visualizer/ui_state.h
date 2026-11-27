@@ -6,7 +6,7 @@
 // ============================================================================
 //  UI STATE
 // ============================================================================
-enum { OV_NONE, OV_SETUP };                    // OV_SETUP: the Spotify Client ID screen
+enum { OV_NONE, OV_SETUP, OV_DEEPL };          // OV_SETUP: Spotify Client ID screen, OV_DEEPL: DeepL key screen
 enum { H_PANEL = 1, H_PREV, H_PLAY, H_NEXT, H_SHUF, H_REP, H_PROG, H_VOL, H_CONNECT, H_COPY, H_Q0, H_Q1, H_Q2, H_QBTN, H_PTAB = 2000, H_PROW = 3000, H_PSLD = 4000, H_PL = 5000, H_PR = 6000, H_PACT = 7000 };
 struct Hit { float x0, y0, x1, y1; int id; };
 extern std::vector<Hit> gHits;

@@ -45,7 +45,7 @@ private:
     bool byLevel = false;
     unsigned artGen = 0;
     std::string lastTrackId;
-    struct LyItem { ComPtr<IDWriteTextLayout> lay; int j = 0; float yc = 0, w = 0, h = 0, left = 0, s = 1.f, alpha = 1.f, w0 = 0.f; };
+    struct LyItem { ComPtr<IDWriteTextLayout> lay, trLay; int j = 0; float yc = 0, w = 0, h = 0, hm = 0, left = 0, s = 1.f, alpha = 1.f, w0 = 0.f; };   // h: whole row, hm: lyric line only (translation sits below it)
     LyricsData lyr;
     unsigned lyrGen = 0;
     double lyrAt = -100;
@@ -115,6 +115,7 @@ private:
     bool introActive() const;                                           // would the song intro be showing for the current track?                       // big title / artist reveal when a song starts
     float qT = 0.f;                                                     // queue peek: open amount
     void drawSetup(double now, D2D1_COLOR_F ac);
+    void drawDeepL(double now, D2D1_COLOR_F ac);                        // DeepL key screen (T)
 };
 
 extern Renderer gR;

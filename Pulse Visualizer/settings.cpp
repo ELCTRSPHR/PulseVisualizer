@@ -22,6 +22,10 @@ const wchar_t* const kLyColor[] = { L"Theme gradient", L"Clean white", L"Theme s
 const wchar_t* const kLySide[] = { L"Centered", L"Middle right" };
 const wchar_t* const kLyPos[] = { L"Bottom", L"Center", L"Top" };
 const wchar_t* const kOnOff[] = { L"Off", L"On" };
+const wchar_t* const kTrLang[NTRLANG] = { L"English", L"Spanish", L"French", L"German", L"Italian", L"Portuguese", L"Dutch", L"Polish",
+    L"Russian", L"Turkish", L"Ukrainian", L"Arabic", L"Japanese", L"Korean", L"Chinese", L"Indonesian", L"Swedish" };
+const char* const kTrCode[NTRLANG] = { "EN-US", "ES", "FR", "DE", "IT", "PT-BR", "NL", "PL", "RU", "TR", "UK", "AR", "JA", "KO", "ZH-HANS", "ID", "SV" };
+const char* translateTarget() { return (S.lyrics > 0.5f && S.translate > 0.5f) ? kTrCode[clampv((int)(S.trLang + 0.5f), 0, NTRLANG - 1)] : ""; }
 Param P[] = {
     { L"Visual",             &S.mode,       0,    2,      1,     kMode,     0 },
     { L"Color theme",        &S.theme,      0,    7,      1,     kTheme,    0 },
@@ -80,6 +84,8 @@ Param P[] = {
     { L"Color grade",        &S.grade,      0,    1,      0.05f, nullptr,   0 },
     { L"Shader background",  &S.bgStyle,    0,    3,      1,     kBgStyle,  0 },
     { L"Background strength",&S.bgStrength, 0,    1,      0.05f, nullptr,   0 },
+    { L"Lyrics translation", &S.translate,  0,    1,      1,     kOnOff,    0 },
+    { L"Translate to",       &S.trLang,     0,    NTRLANG - 1, 1, kTrLang,  0 },
 };
 const int NP = (int)(sizeof(P) / sizeof(P[0]));
 void adjust(Param& p, int dir, bool big) {

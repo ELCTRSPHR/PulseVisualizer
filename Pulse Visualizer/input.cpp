@@ -18,10 +18,18 @@ void connectSpotify() {
     else if (st == Spotify::ST_WAIT) toast(L"Waiting for you to approve access in the browser...");
     else { gSp.connect(); toast(L"Opening Spotify sign-in in your browser..."); }
 }
+void openDeepL() { gOverlay = OV_DEEPL; gInput.clear(); gShowUI = true; gPanel = false; }
 void overlayEnter() {
     if (gOverlay == OV_SETUP) {
         if (gInput.empty()) return;
         gSp.setClientId(toU8(gInput)); gSp.connect(); closeOverlay(); toast(L"Approve access in your browser");
+    }
+    else if (gOverlay == OV_DEEPL) {
+        if (gInput.empty()) {                         // Enter on an empty field removes a saved key
+            if (gSp.haveDeepL) { gSp.setDeepLKey(""); toast(L"DeepL key removed"); }
+            closeOverlay(); return;
+        }
+        gSp.setDeepLKey(toU8(gInput)); S.translate = 1.f; closeOverlay(); toast(L"Checking your DeepL key...");
     }
 }
 int hitTest(float x, float y) {
